@@ -33,13 +33,16 @@ if [ "$platform" = "Linux" ]; then
   tar -xf musl-${musl_version}.tar.gz
 
   echo "= building musl"
+  working_dir=$(pwd)
+
+  install_dir=${working_dir}/musl-install
+
   pushd musl-${musl_version}
-  ./configure --prefix=../musl-install
+  ./configure --prefix=${install_dir}
   make install
   popd # musl-${musl-version}
 
   echo "= setting CC to musl-gcc"
-  working_dir=$(pwd)
   export CC=${working_dir}/musl-install/bin/musl-gcc
   export CFLAGS="-static"
 else
