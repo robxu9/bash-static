@@ -17,3 +17,4 @@ deploy:
   on:
     repo: robxu9/bash-static
     tags: true
+    all_branches: true
