@@ -1,10 +1,16 @@
 language: c
-
 os:
-  - linux
-  - osx
-
+- linux
+- osx
 before_install:
-  - "if [ \"$TRAVIS_OS_NAME\" = \"linux\" ]; then sudo apt-get update -qq; sudo apt-get install -qq build-essential; fi"
-
+- if [ "$TRAVIS_OS_NAME" = "linux" ]; then sudo apt-get update -qq; sudo apt-get install
+  -qq build-essential; fi
 script: "./build.sh"
+deploy:
+  provider: releases
+  api_key:
+    secure: Q7Rj57lrX55L+bdbRg59TTuf7rroQeDjw5emXVG4JSHPMiZOYZE75LM8VZ9clvGUjdNxlcPcGIATNBA9e8i64hZGyZ3QRr3QqJ87gtFZfiMVHin02+WCQEa4BA24UtmygI0xZ99jCVJCw7NtbYEP/6miDbC5NqiShX2DP1Ygt9E=
+  file: releases/bash
+  skip_cleanup: true
+  on:
+    repo: robxu9/bash-static
