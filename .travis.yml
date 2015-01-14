@@ -14,3 +14,4 @@ deploy:
   skip_cleanup: true
   on:
     repo: robxu9/bash-static
+    tags: true
