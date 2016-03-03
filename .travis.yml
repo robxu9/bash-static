@@ -9,7 +9,7 @@ script: "./build.sh && mv -v releases/bash releases/bash-$TRAVIS_OS_NAME"
 deploy:
   provider: releases
   api_key:
-    secure: Q7Rj57lrX55L+bdbRg59TTuf7rroQeDjw5emXVG4JSHPMiZOYZE75LM8VZ9clvGUjdNxlcPcGIATNBA9e8i64hZGyZ3QRr3QqJ87gtFZfiMVHin02+WCQEa4BA24UtmygI0xZ99jCVJCw7NtbYEP/6miDbC5NqiShX2DP1Ygt9E=
+    secure: UfRT4iSXWMjQLcTHje+WybtCM9WZJ4Ak/CzBDtlNSgAlLM3/+0x9u5IrKnKEdtwMX1ri+gMt08EI0Hdkc8gjAQr4Pi0HIyUhb9D4xFNJLxsQxKbkvC0nVVkSHZuS1dDE8V7323Oro5i7DF15Gx6EwWohwg3VrKhsUq91QbwmsCY=
   file: releases/bash-$TRAVIS_OS_NAME
   skip_cleanup: true
   on:
