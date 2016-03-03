@@ -5,8 +5,9 @@
 #
 # For Linux, also builds musl for truly static linking.
 
-bash_version="4.3.30"
-musl_version="1.1.5"
+bash_version="4.3"
+bash_patch_level=42
+musl_version="1.1.14"
 
 platform=$(uname -s)
 
@@ -24,6 +25,14 @@ curl -LO http://ftp.gnu.org/gnu/bash/bash-${bash_version}.tar.gz
 
 echo "= extracting bash"
 tar -xf bash-${bash_version}.tar.gz
+
+echo "= patching bash"
+bash_patch_prefix=$(echo "bash${bash_version}" | sed -e 's/\.//g')
+pushd bash-${bash_version}
+for lvl in $(seq $bash_patch_level); do
+    curl -L http://ftp.gnu.org/gnu/bash/bash-${bash_version}-patches/${bash_patch_prefix}-$(printf '%03d' $lvl) | patch -p0
+done
+popd
 
 if [ "$platform" = "Linux" ]; then
   echo "= downloading musl"
@@ -55,6 +64,7 @@ echo "= building bash"
 pushd bash-${bash_version}
 CFLAGS="$CFLAGS -Os" ./configure --without-bash-malloc
 make
+make tests
 popd # bash-${bash_version}
 
 popd # build
