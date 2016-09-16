@@ -5,9 +5,9 @@
 #
 # For Linux, also builds musl for truly static linking.
 
-bash_version="4.3"
-bash_patch_level=42
-musl_version="1.1.14"
+bash_version="4.4"
+bash_patch_level=0
+musl_version="1.1.15"
 
 platform=$(uname -s)
 
