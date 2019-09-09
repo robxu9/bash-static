@@ -5,7 +5,7 @@
 #
 # For Linux, also builds musl for truly static linking.
 
-bash_version="4.4"
+bash_version="5.0"
 bash_patch_level=0
 musl_version="1.1.15"
 
