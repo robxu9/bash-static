@@ -7,7 +7,7 @@
 
 bash_version="5.0"
 bash_patch_level=0
-musl_version="1.1.23"
+musl_version="1.2.1"
 
 platform=$(uname -s)
 
@@ -36,7 +36,7 @@ popd
 
 if [ "$platform" = "Linux" ]; then
   echo "= downloading musl"
-  curl -LO http://www.musl-libc.org/releases/musl-${musl_version}.tar.gz
+  curl -LO https://musl.libc.org/releases/musl-${musl_version}.tar.gz
 
   echo "= extracting musl"
   tar -xf musl-${musl_version}.tar.gz
