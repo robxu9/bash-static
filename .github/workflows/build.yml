@@ -53,8 +53,9 @@ jobs:
       - name: create release
         uses: softprops/action-gh-release@v1
         with:
-          files: artifacts/*
+          files: artifacts/*/*
           body_path: NOTES.txt
+          fail_on_unmatched_files: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       
