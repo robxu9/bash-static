@@ -5,9 +5,11 @@
 #
 # For Linux, also builds musl for truly static linking.
 
-bash_version="5.1"
-bash_patch_level=4
-musl_version="1.2.1"
+set -e 
+set -o pipefail
+
+# load version info
+. version.sh
 
 platform=$(uname -s)
 
@@ -19,24 +21,40 @@ fi
 mkdir build # make build directory
 pushd build
 
+# pre-prepare gpg for verificaiton
+echo "= preparing gpg"
+export GNUPGHOME="$(mktemp -d)"
+# public key for bash
+gpg --batch --keyserver ha.pool.sks-keyservers.net --recv-keys 7C0135FB088AAF6C66C650B9BB5869F064EA74AB
+# public key for musl
+gpg --batch --keyserver ha.pool.sks-keyservers.net --recv-keys 836489290BB6B70F99FFDA0556BCDB593020450F
+
 # download tarballs
 echo "= downloading bash"
 curl -LO http://ftp.gnu.org/gnu/bash/bash-${bash_version}.tar.gz
+curl -LO http://ftp.gnu.org/gnu/bash/bash-${bash_version}.tar.gz.sig
+gpg --batch --verify bash-${bash_version}.tar.gz.sig bash-${bash_version}.tar.gz
 
 echo "= extracting bash"
 tar -xf bash-${bash_version}.tar.gz
 
 echo "= patching bash"
 bash_patch_prefix=$(echo "bash${bash_version}" | sed -e 's/\.//g')
-pushd bash-${bash_version}
 for lvl in $(seq $bash_patch_level); do
-    curl -L http://ftp.gnu.org/gnu/bash/bash-${bash_version}-patches/${bash_patch_prefix}-$(printf '%03d' $lvl) | patch -p0
+    curl -LO http://ftp.gnu.org/gnu/bash/bash-${bash_version}-patches/${bash_patch_prefix}-$(printf '%03d' $lvl)
+    curl -LO http://ftp.gnu.org/gnu/bash/bash-${bash_version}-patches/${bash_patch_prefix}-$(printf '%03d' $lvl).sig
+    gpg --batch --verify ${bash_patch_prefix}-$(printf '%03d' $lvl).sig ${bash_patch_prefix}-$(printf '%03d' $lvl)
+
+    pushd bash-${bash_version}
+    cat ../${bash_patch_prefix}-$(printf '%03d' $lvl) | patch -p0
+    popd
 done
-popd
 
 if [ "$platform" = "Linux" ]; then
   echo "= downloading musl"
   curl -LO https://musl.libc.org/releases/musl-${musl_version}.tar.gz
+  curl -LO https://musl.libc.org/releases/musl-${musl_version}.tar.gz.asc
+  gpg --batch --verify musl-${musl_version}.tar.gz.asc musl-${musl_version}.tar.gz
 
   echo "= extracting musl"
   tar -xf musl-${musl_version}.tar.gz
