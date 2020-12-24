@@ -52,7 +52,7 @@ for lvl in $(seq $bash_patch_level); do
 done
 
 if [ "$platform" = "Linux" ]; then
-  if [ "$(cat /etc/os-release | grep ID=)" = "ID=alpine" ]; then
+  if [ "$(cat /etc/os-release | grep ID= | head -n1)" = "ID=alpine" ]; then
     echo "= skipping installation of musl because this is alpine linux (and it is already installed)"
   else
     echo "= downloading musl"
