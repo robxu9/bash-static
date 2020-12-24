@@ -9,7 +9,11 @@ jobs:
     runs-on: ${{matrix.os}}
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        include:
+          - os: ubuntu-latest
+            target: linux
+          - os: macos-latest
+            target: macos
     steps:
     - uses: actions/checkout@v2
     - name: install apt packages
@@ -31,14 +35,52 @@ jobs:
       run: |
         brew install gnupg
     - name: build
-      run: ./build.sh && mv -v releases/bash releases/bash-${{matrix.os}}
+      run: ./build.sh && mv -v releases/bash releases/bash-${{matrix.target}}-x86_64
       shell: bash
     - uses: actions/upload-artifact@v2  
       with:
-        name: bash-${{matrix.os}}
-        path: releases/bash-${{matrix.os}}
+        name: bash-${{matrix.target}}-x86_64
+        path: releases/bash-${{matrix.target}}-x86_64
+  docker-build: 
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: [armv6, armv7, aarch64, ppc64le, s390x]
+    steps:
+      - uses: actions/checkout@v2
+      - uses: uraimo/run-on-arch-action@v2.0.8
+        id: build
+        with:
+          arch: ${{ matrix.arch }}
+          distro: alpine_latest
+          githubToken: ${{ github.token }}
+          dockerRunArgs: |
+            --volume "${PWD}:/data"
+
+          # The shell to run commands with in the container
+          shell: /bin/sh
+
+          # Install some dependencies in the container. This speeds up builds if
+          # you are also using githubToken. Any dependencies installed here will
+          # be part of the container image that gets cached, so subsequent
+          # builds don't have to re-install them. The image layer is cached
+          # publicly in your project's package repository, so it is vital that
+          # no secrets are present in the container state or logs.
+          install: |
+            apk update
+            apk add alpine-sdk gnupg git bash
+
+          # Produce a binary artifact and place it in the mounted volume
+          run: |
+            cd /data && ./build.sh && mv -v releases/bash releases/bash-linux-${{matrix.arch}}
+      - uses: actions/upload-artifact@v2  
+        with:
+          name: bash-linux-${{matrix.arch}}
+          path: releases/bash-linux-${{matrix.arch}}
   release:
-    needs: build
+    needs:
+      - build
+      - docker-build
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     steps:

@@ -3,7 +3,8 @@
 # build static bash because we need exercises in minimalism
 # MIT licensed: google it or see robxu9.mit-license.org.
 #
-# For Linux, also builds musl for truly static linking.
+# For Linux, also builds musl for truly static linking if
+# musl is not installed.
 
 set -e 
 set -o pipefail
@@ -25,9 +26,9 @@ pushd build
 echo "= preparing gpg"
 export GNUPGHOME="$(mktemp -d)"
 # public key for bash
-gpg --batch --keyserver ha.pool.sks-keyservers.net --recv-keys 7C0135FB088AAF6C66C650B9BB5869F064EA74AB
+gpg --batch --keyserver hkp://ipv4.pool.sks-keyservers.net --recv-keys 7C0135FB088AAF6C66C650B9BB5869F064EA74AB
 # public key for musl
-gpg --batch --keyserver ha.pool.sks-keyservers.net --recv-keys 836489290BB6B70F99FFDA0556BCDB593020450F
+gpg --batch --keyserver hkp://ipv4.pool.sks-keyservers.net --recv-keys 836489290BB6B70F99FFDA0556BCDB593020450F
 
 # download tarballs
 echo "= downloading bash"
@@ -51,26 +52,30 @@ for lvl in $(seq $bash_patch_level); do
 done
 
 if [ "$platform" = "Linux" ]; then
-  echo "= downloading musl"
-  curl -LO https://musl.libc.org/releases/musl-${musl_version}.tar.gz
-  curl -LO https://musl.libc.org/releases/musl-${musl_version}.tar.gz.asc
-  gpg --batch --verify musl-${musl_version}.tar.gz.asc musl-${musl_version}.tar.gz
+  if [ "$(cat /etc/os-release | grep ID= | head -n1)" = "ID=alpine" ]; then
+    echo "= skipping installation of musl because this is alpine linux (and it is already installed)"
+  else
+    echo "= downloading musl"
+    curl -LO https://musl.libc.org/releases/musl-${musl_version}.tar.gz
+    curl -LO https://musl.libc.org/releases/musl-${musl_version}.tar.gz.asc
+    gpg --batch --verify musl-${musl_version}.tar.gz.asc musl-${musl_version}.tar.gz
 
-  echo "= extracting musl"
-  tar -xf musl-${musl_version}.tar.gz
+    echo "= extracting musl"
+    tar -xf musl-${musl_version}.tar.gz
 
-  echo "= building musl"
-  working_dir=$(pwd)
+    echo "= building musl"
+    working_dir=$(pwd)
 
-  install_dir=${working_dir}/musl-install
+    install_dir=${working_dir}/musl-install
 
-  pushd musl-${musl_version}
-  ./configure --prefix=${install_dir}
-  make install
-  popd # musl-${musl-version}
+    pushd musl-${musl_version}
+    ./configure --prefix=${install_dir}
+    make install
+    popd # musl-${musl-version}
 
-  echo "= setting CC to musl-gcc"
-  export CC=${working_dir}/musl-install/bin/musl-gcc
+    echo "= setting CC to musl-gcc"
+    export CC=${working_dir}/musl-install/bin/musl-gcc
+  fi
   export CFLAGS="-static"
 else
   echo "= WARNING: your platform does not support static binaries."
