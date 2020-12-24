@@ -25,9 +25,9 @@ pushd build
 echo "= preparing gpg"
 export GNUPGHOME="$(mktemp -d)"
 # public key for bash
-gpg --batch --keyserver ha.pool.sks-keyservers.net --recv-keys 7C0135FB088AAF6C66C650B9BB5869F064EA74AB
+gpg --batch --keyserver pool.sks-keyservers.net --recv-keys 7C0135FB088AAF6C66C650B9BB5869F064EA74AB
 # public key for musl
-gpg --batch --keyserver ha.pool.sks-keyservers.net --recv-keys 836489290BB6B70F99FFDA0556BCDB593020450F
+gpg --batch --keyserver pool.sks-keyservers.net --recv-keys 836489290BB6B70F99FFDA0556BCDB593020450F
 
 # download tarballs
 echo "= downloading bash"
