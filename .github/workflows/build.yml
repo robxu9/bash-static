@@ -48,7 +48,7 @@ jobs:
         arch: [armv6, armv7, aarch64, ppc64le, s390x]
     steps:
       - uses: actions/checkout@v2
-      - uses: uraimo/run-on-arch-action@v2.0.5
+      - uses: uraimo/run-on-arch-action@v2.0.8
         id: build
         with:
           arch: ${{ matrix.arch }}
