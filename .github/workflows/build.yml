@@ -68,11 +68,11 @@ jobs:
           # no secrets are present in the container state or logs.
           install: |
             apk update
-            apk add alpine-sdk gnupg git
+            apk add alpine-sdk gnupg git bash
 
           # Produce a binary artifact and place it in the mounted volume
           run: |
-            cd /data && ls -al && ./build.sh && mv -v releases/bash releases/bash-linux-${{matrix.arch}}
+            cd /data && ./build.sh && mv -v releases/bash releases/bash-linux-${{matrix.arch}}
       - uses: actions/upload-artifact@v2  
         with:
           name: bash-linux-${{matrix.arch}}
