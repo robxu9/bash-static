@@ -55,7 +55,7 @@ jobs:
           distro: alpine_latest
           githubToken: ${{ github.token }}
           dockerRunArgs: |
-            --volume "${PWD}/:/data"
+            --volume "${PWD}:/data"
 
           # The shell to run commands with in the container
           shell: /bin/sh
@@ -72,7 +72,7 @@ jobs:
 
           # Produce a binary artifact and place it in the mounted volume
           run: |
-            cd /data && ./build.sh && mv -v releases/bash releases/bash-linux-${{matrix.arch}}
+            cd /data && ls -al && ./build.sh && mv -v releases/bash releases/bash-linux-${{matrix.arch}}
       - uses: actions/upload-artifact@v2  
         with:
           name: bash-linux-${{matrix.arch}}
