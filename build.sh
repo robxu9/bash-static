@@ -80,6 +80,10 @@ if [ "$platform" = "Linux" ]; then
 else
   echo "= WARNING: your platform does not support static binaries."
   echo "= (This is mainly due to non-static libc availability.)"
+  if [ "$platform" = "Darwin" ]; then
+    # set minimum version of macOS to 10.13
+    export MACOSX_DEPLOYMENT_TARGET="10.13"
+  fi
 fi
 
 echo "= building bash"
