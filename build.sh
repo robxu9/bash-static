@@ -101,6 +101,8 @@ else
   if [ "$platform" = "Darwin" ]; then
     # set minimum version of macOS to 10.13
     export MACOSX_DEPLOYMENT_TARGET="10.13"
+    # https://www.gnu.org/software/bash/manual/html_node/Compilers-and-Options.html
+    export CC="gcc -std=c89 -Wno-implicit-function-declaration -Wno-return-type"
   fi
 fi
 
