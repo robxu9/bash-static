@@ -82,27 +82,27 @@ jobs:
         with:
           name: bash-linux-${{matrix.arch}}
           path: releases/bash-linux-${{matrix.arch}}
-  macos-universal:
-    needs:
-      - build
-    runs-on: macos-latest
-    steps:
-      - uses: actions/download-artifact@v2
-        with:
-          path: artifacts
-      - name: make executable
-        run: chmod +x artifacts/* && ls -al && ls -al artifacts/
-      - name: run lipo to create universal binary
-        run: lipo -arch x86_64 artifacts/bash-macos-x86_64 -arch arm64 artifacts/bash-macos-aarch64 -create -output bash-macos-universal
-      - uses: actions/upload-artifact@v2
-        with:
-          name: bash-macos-universal
-          path: bash-macos-universal
+  # macos-universal:
+  #   needs:
+  #     - build
+  #   runs-on: macos-latest
+  #   steps:
+  #     - uses: actions/download-artifact@v2
+  #       with:
+  #         path: artifacts
+  #     - name: make executable
+  #       run: chmod +x artifacts/* && ls -al && ls -al artifacts/
+  #     - name: run lipo to create universal binary
+  #       run: lipo -arch x86_64 artifacts/bash-macos-x86_64 -arch arm64 artifacts/bash-macos-aarch64 -create -output bash-macos-universal
+  #     - uses: actions/upload-artifact@v2
+  #       with:
+  #         name: bash-macos-universal
+  #         path: bash-macos-universal
   release:
     needs:
       - build
       - docker-build
-      - macos-universal
+      # - macos-universal
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     steps:
