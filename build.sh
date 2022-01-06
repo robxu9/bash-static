@@ -123,6 +123,8 @@ else
     if [[ $arch == "aarch64" ]]; then
       export CFLAGS="-target arm64-apple-macos"
       configure_args=("${configure_args[@]}" "--host=aarch64-apple-darwin")
+    else
+      export CFLAGS="-target x86_64-apple-macos10.12"
     fi
   fi
 fi
