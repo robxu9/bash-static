@@ -6,81 +6,89 @@ on:
 
 jobs:
   build:
-    runs-on: ${{matrix.os}}
-    strategy:
-      matrix:
-        include:
-          - os: ubuntu-latest
-            target: linux
-          - os: macos-latest
-            target: macos
-    steps:
-    - uses: actions/checkout@v2.4.0
-    - name: install apt packages
-      if: ${{ matrix.os == 'ubuntu-latest' }}
-      run: |
-        sudo apt-get update -qq
-        sudo apt-get install -qq build-essential gpg
-    - name: install msys2 packages
-      if: ${{ matrix.os == 'windows-latest' }}
-      uses: msys2/setup-msys2@v2
-      with:
-        update: true
-        install: >-
-          base-devel
-          git
-          gnupg
-    - name: install homebrew packages
-      if: ${{ matrix.os == 'macos-latest' }}
-      run: |
-        brew install gnupg
-    - name: build
-      run: ./build.sh && mv -v releases/bash releases/bash-${{matrix.target}}-x86_64
-      shell: bash
-    - uses: actions/upload-artifact@v2  
-      with:
-        name: bash-${{matrix.target}}-x86_64
-        path: releases/bash-${{matrix.target}}-x86_64
-  docker-build: 
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        arch: [armv6, armv7, aarch64, ppc64le, s390x]
+        os:
+          - ubuntu-latest
+        target:
+          - x86_64-linux-musl
+          - i386-linux-musl
+          - arm-linux-musleabi
+          - powerpc64le-linux-musl
+          - riscv64-linux-musl
+          - s390x-linux-musl
+          - mips64-linux-musl
+          - mips64el-linux-musl
+          - aarch64-linux-musl
+        include:
+          - os: macos-latest
+            target: x86_64-macos-gnu
+          - os: macos-latest
+            target: aarch64-macos-gnu
+          - os: windows-latest
+            target: x86_64-windows-gnu
+          - os: windows-latest
+            target: i386-windows-gnu
+          - os: windows-latest
+            target: arm-windows-gnu
+          - os: windows-latest
+            target: aarch64-windows-gnu
     steps:
       - uses: actions/checkout@v2.4.0
-      - uses: uraimo/run-on-arch-action@v2.1.1
-        id: build
+      - name: install apt packages
+        if: ${{ matrix.os == 'ubuntu-latest' }}
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -qq build-essential gpg
+          brew install zig
+      - name: install homebrew packages
+        if: ${{ matrix.os == 'macos-latest' }}
+        run: |
+          brew install gnupg zig
+      - name: install msys2 for windows
+        if: ${{ matrix.os == 'windows-latest' }}
+        uses: msys2/setup-msys2@v2
         with:
-          arch: ${{ matrix.arch }}
-          distro: alpine_latest
-          githubToken: ${{ github.token }}
-          dockerRunArgs: |
-            --volume "${PWD}:/data"
-
-          # The shell to run commands with in the container
-          shell: /bin/sh
-
-          # Install some dependencies in the container. This speeds up builds if
-          # you are also using githubToken. Any dependencies installed here will
-          # be part of the container image that gets cached, so subsequent
-          # builds don't have to re-install them. The image layer is cached
-          # publicly in your project's package repository, so it is vital that
-          # no secrets are present in the container state or logs.
-          install: |
-            apk update
-            apk add alpine-sdk gnupg git bash
-
-          # Produce a binary artifact and place it in the mounted volume
-          run: |
-            cd /data && ./build.sh && mv -v releases/bash releases/bash-linux-${{matrix.arch}}
-      - uses: actions/upload-artifact@v2  
+          update: true
+          install: >-
+            base-devel
+            git
+            gcc
+          msystem: MSYS
+      - name: Set up QEMU binfmt
+        if: ${{ matrix.os == 'ubuntu-latest' }}
+        id: qemu
+        uses: docker/setup-qemu-action@v1
         with:
-          name: bash-linux-${{matrix.arch}}
-          path: releases/bash-linux-${{matrix.arch}}
+          image: tonistiigi/binfmt:latest
+          platforms: all
+      - name: build
+        run: ./build.sh ${{matrix.target}} && mv -v releases/bash releases/bash-${{matrix.target}}
+        shell: bash
+      - uses: actions/upload-artifact@v2
+        with:
+          name: bash-${{matrix.target}}
+          path: releases/bash-${{matrix.target}}
+  macos-universal:
+    needs:
+      - build
+    runs-on: macos-latest
+    steps:
+      - uses: actions/download-artifact@v2
+        with:
+          path: artifacts
+      - name: create universal binary for macos targets
+        run: |
+          lipo -create -output bash-universal-macos-gnu releases/bash-x86_64-macos-gnu releases/bash-aarch64-macos-gnu
+      - uses: actions/upload-artifact@v2
+        with:
+          name: bash-universal-macos-gnu
+          path: bash-universal-macos-gnu
   release:
     needs:
       - build
-      - docker-build
+      - macos-universal
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     steps:
@@ -100,4 +108,3 @@ jobs:
           fail_on_unmatched_files: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      
