@@ -12,8 +12,13 @@ jobs:
         include:
           - os: ubuntu-latest
             target: linux
+            arch: x86_64
           - os: macos-latest
             target: macos
+            arch: x86_64
+          - os: macos-latest
+            target: macos
+            arch: aarch64
     steps:
     - uses: actions/checkout@v2.4.0
     - name: install apt packages
@@ -33,14 +38,14 @@ jobs:
     - name: install homebrew packages
       if: ${{ matrix.os == 'macos-latest' }}
       run: |
-        brew install gnupg
+        brew install gnupg autoconf
     - name: build
-      run: ./build.sh && mv -v releases/bash releases/bash-${{matrix.target}}-x86_64
+      run: ./build.sh ${{matrix.target}} ${{matrix.arch}} && mv -v releases/bash releases/bash-${{matrix.target}}-${{matrix.arch}}
       shell: bash
     - uses: actions/upload-artifact@v2  
       with:
-        name: bash-${{matrix.target}}-x86_64
-        path: releases/bash-${{matrix.target}}-x86_64
+        name: bash-${{matrix.target}}-${{matrix.arch}}
+        path: releases/bash-${{matrix.target}}-${{matrix.arch}}
   docker-build: 
     runs-on: ubuntu-latest
     strategy:
@@ -68,19 +73,36 @@ jobs:
           # no secrets are present in the container state or logs.
           install: |
             apk update
-            apk add alpine-sdk gnupg git bash
+            apk add alpine-sdk gnupg git bash autoconf bison
 
           # Produce a binary artifact and place it in the mounted volume
           run: |
-            cd /data && ./build.sh && mv -v releases/bash releases/bash-linux-${{matrix.arch}}
+            cd /data && ./build.sh linux ${{matrix.arch}} && mv -v releases/bash releases/bash-linux-${{matrix.arch}}
       - uses: actions/upload-artifact@v2  
         with:
           name: bash-linux-${{matrix.arch}}
           path: releases/bash-linux-${{matrix.arch}}
+  # macos-universal:
+  #   needs:
+  #     - build
+  #   runs-on: macos-latest
+  #   steps:
+  #     - uses: actions/download-artifact@v2
+  #       with:
+  #         path: artifacts
+  #     - name: make executable
+  #       run: chmod +x artifacts/* && ls -al && ls -al artifacts/
+  #     - name: run lipo to create universal binary
+  #       run: lipo -arch x86_64 artifacts/bash-macos-x86_64 -arch arm64 artifacts/bash-macos-aarch64 -create -output bash-macos-universal
+  #     - uses: actions/upload-artifact@v2
+  #       with:
+  #         name: bash-macos-universal
+  #         path: bash-macos-universal
   release:
     needs:
       - build
       - docker-build
+      # - macos-universal
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     steps:

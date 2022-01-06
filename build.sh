@@ -28,9 +28,21 @@ set -e
 set -o pipefail
 
 # load version info
+# shellcheck source=./version.sh
 . version.sh
 
-platform=$(uname -s)
+target="$1"
+arch="$2"
+
+if [[ "$target" == "" ]]; then
+  echo "! no target specified" >&2
+  exit 1
+fi
+
+if [[ "$arch" == "" ]]; then
+  echo "! no arch specified" >&2
+  exit 1
+fi
 
 if [ -d build ]; then
   echo "= removing previous build directory"
@@ -42,11 +54,12 @@ pushd build
 
 # pre-prepare gpg for verificaiton
 echo "= preparing gpg"
-export GNUPGHOME="$(mktemp -d)"
+GNUPGHOME="$(mktemp -d)"
+export GNUPGHOME
 # public key for bash
-gpg --batch --keyserver hkp://keyserver.ubuntu.com --recv-keys 7C0135FB088AAF6C66C650B9BB5869F064EA74AB
+gpg --batch --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 7C0135FB088AAF6C66C650B9BB5869F064EA74AB
 # public key for musl
-gpg --batch --keyserver hkp://keyserver.ubuntu.com --recv-keys 836489290BB6B70F99FFDA0556BCDB593020450F
+gpg --batch --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 836489290BB6B70F99FFDA0556BCDB593020450F
 
 # download tarballs
 echo "= downloading bash"
@@ -60,17 +73,19 @@ tar -xf bash-${bash_version}.tar.gz
 echo "= patching bash"
 bash_patch_prefix=$(echo "bash${bash_version}" | sed -e 's/\.//g')
 for lvl in $(seq $bash_patch_level); do
-    curl -LO http://ftp.gnu.org/gnu/bash/bash-${bash_version}-patches/${bash_patch_prefix}-$(printf '%03d' $lvl)
-    curl -LO http://ftp.gnu.org/gnu/bash/bash-${bash_version}-patches/${bash_patch_prefix}-$(printf '%03d' $lvl).sig
-    gpg --batch --verify ${bash_patch_prefix}-$(printf '%03d' $lvl).sig ${bash_patch_prefix}-$(printf '%03d' $lvl)
+    curl -LO http://ftp.gnu.org/gnu/bash/bash-${bash_version}-patches/"${bash_patch_prefix}"-"$(printf '%03d' "$lvl")"
+    curl -LO http://ftp.gnu.org/gnu/bash/bash-${bash_version}-patches/"${bash_patch_prefix}"-"$(printf '%03d' "$lvl")".sig
+     gpg --batch --verify "${bash_patch_prefix}"-"$(printf '%03d' "$lvl")".sig "${bash_patch_prefix}"-"$(printf '%03d' "$lvl")"
 
     pushd bash-${bash_version}
-    cat ../${bash_patch_prefix}-$(printf '%03d' $lvl) | patch -p0
+    patch -p0 < ../"${bash_patch_prefix}"-"$(printf '%03d' "$lvl")"
     popd
 done
 
-if [ "$platform" = "Linux" ]; then
-  if [ "$(cat /etc/os-release | grep ID= | head -n1)" = "ID=alpine" ]; then
+configure_args=()
+
+if [ "$target" = "linux" ]; then
+  if [ "$(grep ID= < /etc/os-release | head -n1)" = "ID=alpine" ]; then
     echo "= skipping installation of musl because this is alpine linux (and it is already installed)"
   else
     echo "= downloading musl"
@@ -87,7 +102,7 @@ if [ "$platform" = "Linux" ]; then
     install_dir=${working_dir}/musl-install
 
     pushd musl-${musl_version}
-    ./configure --prefix=${install_dir}
+    ./configure --prefix="${install_dir}"
     make install
     popd # musl-${musl-version}
 
@@ -98,18 +113,27 @@ if [ "$platform" = "Linux" ]; then
 else
   echo "= WARNING: your platform does not support static binaries."
   echo "= (This is mainly due to non-static libc availability.)"
-  if [ "$platform" = "Darwin" ]; then
+  if [[ $target == "macos" ]]; then
     # set minimum version of macOS to 10.13
     export MACOSX_DEPLOYMENT_TARGET="10.13"
     # https://www.gnu.org/software/bash/manual/html_node/Compilers-and-Options.html
     export CC="gcc -std=c89 -Wno-implicit-function-declaration -Wno-return-type"
+
+    # if $arch is aarch64 for mac, target arm64e
+    if [[ $arch == "aarch64" ]]; then
+      export CFLAGS="-target arm64-apple-macos"
+      configure_args=("${configure_args[@]}" "--host=aarch64-apple-darwin")
+    else
+      export CFLAGS="-target x86_64-apple-macos10.12"
+    fi
   fi
 fi
 
 echo "= building bash"
 
 pushd bash-${bash_version}
-CFLAGS="$CFLAGS -Os" ./configure --without-bash-malloc
+autoconf -f
+CFLAGS="$CFLAGS -Os" ./configure --without-bash-malloc "${configure_args[@]}"
 make
 make tests
 popd # bash-${bash_version}
