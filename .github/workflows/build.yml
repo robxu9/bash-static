@@ -12,8 +12,13 @@ jobs:
         include:
           - os: ubuntu-latest
             target: linux
+            arch: x86_64
           - os: macos-latest
             target: macos
+            arch: x86_64
+          - os: macos-latest
+            target: macos
+            arch: aarch64
     steps:
     - uses: actions/checkout@v2.4.0
     - name: install apt packages
@@ -33,14 +38,14 @@ jobs:
     - name: install homebrew packages
       if: ${{ matrix.os == 'macos-latest' }}
       run: |
-        brew install gnupg
+        brew install gnupg autoconf
     - name: build
-      run: ./build.sh && mv -v releases/bash releases/bash-${{matrix.target}}-x86_64
+      run: ./build.sh ${{matrix.target}} ${{matrix.arch}} && mv -v releases/bash releases/bash-${{matrix.target}}-${{matrix.arch}}
       shell: bash
     - uses: actions/upload-artifact@v2  
       with:
-        name: bash-${{matrix.target}}-x86_64
-        path: releases/bash-${{matrix.target}}-x86_64
+        name: bash-${{matrix.target}}-${{matrix.arch}}
+        path: releases/bash-${{matrix.target}}-${{matrix.arch}}
   docker-build: 
     runs-on: ubuntu-latest
     strategy:
@@ -72,7 +77,7 @@ jobs:
 
           # Produce a binary artifact and place it in the mounted volume
           run: |
-            cd /data && ./build.sh && mv -v releases/bash releases/bash-linux-${{matrix.arch}}
+            cd /data && ./build.sh linux ${{matrix.arch}} && mv -v releases/bash releases/bash-linux-${{matrix.arch}}
       - uses: actions/upload-artifact@v2  
         with:
           name: bash-linux-${{matrix.arch}}
