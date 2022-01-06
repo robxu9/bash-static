@@ -82,7 +82,7 @@ for lvl in $(seq $bash_patch_level); do
     popd
 done
 
-configure_args=""
+configure_args=()
 
 if [ "$target" = "linux" ]; then
   if [ "$(grep ID= < /etc/os-release | head -n1)" = "ID=alpine" ]; then
@@ -122,7 +122,7 @@ else
     # if $arch is aarch64 for mac, target arm64e
     if [[ $arch == "aarch64" ]]; then
       export CFLAGS="-target arm64-apple-macos"
-      configure_args="${configure_args} --host=aarch64-apple-darwin"
+      configure_args=("${configure_args[@]}" "--host=aarch64-apple-darwin")
     fi
   fi
 fi
@@ -131,7 +131,7 @@ echo "= building bash"
 
 pushd bash-${bash_version}
 autoconf -f
-CFLAGS="$CFLAGS -Os" ./configure --without-bash-malloc "${configure_args}"
+CFLAGS="$CFLAGS -Os" ./configure --without-bash-malloc "${configure_args[@]}"
 make
 make tests
 popd # bash-${bash_version}
