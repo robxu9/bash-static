@@ -73,7 +73,7 @@ jobs:
           # no secrets are present in the container state or logs.
           install: |
             apk update
-            apk add alpine-sdk gnupg git bash
+            apk add alpine-sdk gnupg git bash autoconf
 
           # Produce a binary artifact and place it in the mounted volume
           run: |
