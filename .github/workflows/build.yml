@@ -20,7 +20,7 @@ jobs:
             target: macos
             arch: aarch64
     steps:
-    - uses: actions/checkout@v2.4.0
+    - uses: actions/checkout@v3
     - name: install apt packages
       if: ${{ matrix.os == 'ubuntu-latest' }}
       run: |
@@ -52,7 +52,7 @@ jobs:
       matrix:
         arch: [armv6, armv7, aarch64, ppc64le, s390x]
     steps:
-      - uses: actions/checkout@v2.4.0
+      - uses: actions/checkout@v3
       - uses: uraimo/run-on-arch-action@v2.1.1
         id: build
         with:
@@ -106,7 +106,7 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2.4.0
+      - uses: actions/checkout@v3
       - name: generate changelog
         run: ./changelog.sh
       - uses: actions/download-artifact@v2
