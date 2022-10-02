@@ -119,6 +119,9 @@ else
     # https://www.gnu.org/software/bash/manual/html_node/Compilers-and-Options.html
     export CC="gcc -std=c89 -Wno-implicit-function-declaration -Wno-return-type"
 
+    # use included gettext on mac because otherwise it might read from homebrew
+    configure_args=("${configure_args[@]}" "--with-included-gettext")
+
     # if $arch is aarch64 for mac, target arm64e
     if [[ $arch == "aarch64" ]]; then
       export CFLAGS="-target arm64-apple-macos"
