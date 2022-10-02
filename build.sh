@@ -24,7 +24,7 @@
 # For Linux, also builds musl for truly static linking if
 # musl is not installed.
 
-set -e 
+set -e
 set -o pipefail
 
 # load version info
@@ -72,10 +72,10 @@ tar -xf bash-${bash_version}.tar.gz
 
 echo "= patching bash"
 bash_patch_prefix=$(echo "bash${bash_version}" | sed -e 's/\.//g')
-for lvl in $(seq $bash_patch_level); do
+for lvl in $(seq 1 $bash_patch_level); do
     curl -LO http://ftp.gnu.org/gnu/bash/bash-${bash_version}-patches/"${bash_patch_prefix}"-"$(printf '%03d' "$lvl")"
     curl -LO http://ftp.gnu.org/gnu/bash/bash-${bash_version}-patches/"${bash_patch_prefix}"-"$(printf '%03d' "$lvl")".sig
-     gpg --batch --verify "${bash_patch_prefix}"-"$(printf '%03d' "$lvl")".sig "${bash_patch_prefix}"-"$(printf '%03d' "$lvl")"
+    gpg --batch --verify "${bash_patch_prefix}"-"$(printf '%03d' "$lvl")".sig "${bash_patch_prefix}"-"$(printf '%03d' "$lvl")"
 
     pushd bash-${bash_version}
     patch -p0 < ../"${bash_patch_prefix}"-"$(printf '%03d' "$lvl")"
