@@ -1,7 +1,7 @@
 #!/bin/bash
 
-bash_version="5.1"
-bash_patch_level=16
+bash_version="5.2"
+bash_patch_level=0
 musl_version="1.2.3"
 
 export bash_version
