@@ -58,9 +58,9 @@ echo "= preparing gpg"
 GNUPGHOME="$(mktemp -d)"
 export GNUPGHOME
 # public key for bash
-gpg --batch --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 7C0135FB088AAF6C66C650B9BB5869F064EA74AB
+gpg --batch --keyserver hkps://keyserver.ubuntu.com:443 --recv-keys 7C0135FB088AAF6C66C650B9BB5869F064EA74AB
 # public key for musl
-gpg --batch --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 836489290BB6B70F99FFDA0556BCDB593020450F
+gpg --batch --keyserver hkps://keyserver.ubuntu.com:443 --recv-keys 836489290BB6B70F99FFDA0556BCDB593020450F
 
 # download tarballs
 echo "= downloading bash"
@@ -126,7 +126,10 @@ else
     # set minimum version of macOS to 10.13
     export MACOSX_DEPLOYMENT_TARGET="10.13"
     # https://www.gnu.org/software/bash/manual/html_node/Compilers-and-Options.html
-    export CC="gcc -std=c89 -Wno-implicit-function-declaration -Wno-return-type"
+    export CC="clang -std=c89 -Wno-implicit-function-declaration -Wno-return-type"
+
+    # use included gettext to avoid reading from other places, like homebrew
+    configure_args=("${configure_args[@]}" "--with-included-gettext")
 
     # if $arch is aarch64 for mac, target arm64e
     if [[ $arch == "aarch64" ]]; then
@@ -134,6 +137,7 @@ else
       configure_args=("${configure_args[@]}" "--host=aarch64-apple-darwin")
     else
       export CFLAGS="-target x86_64-apple-macos10.12"
+      configure_args=("${configure_args[@]}" "--host=x86_64-apple-macos10.12")
     fi
   fi
 fi
