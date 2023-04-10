@@ -26,6 +26,7 @@
 
 set -e
 set -o pipefail
+shopt -s nullglob
 
 # load version info
 # shellcheck source=./version.sh
@@ -79,6 +80,14 @@ for lvl in $(seq 1 $bash_patch_level); do
 
     pushd bash-${bash_version}
     patch -p0 < ../"${bash_patch_prefix}"-"$(printf '%03d' "$lvl")"
+    popd
+done
+
+echo "= patching with any custom patches we have"
+for i in ../custom/*.patch; do
+    echo $i
+    pushd bash-${bash_version}
+    patch -p1 < ../"$i"
     popd
 done
 
