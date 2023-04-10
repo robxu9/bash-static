@@ -91,9 +91,9 @@ jobs:
         with:
           path: artifacts
       - name: make executable
-        run: chmod +x artifacts/* && ls -al && ls -al artifacts/
+        run: chmod +x artifacts/*/* && ls -al && ls -al artifacts/
       - name: run lipo to create universal binary
-        run: lipo -create -arch arm64 artifacts/bash-macos-aarch64 -arch x86_64 artifacts/bash-macos-x86_64 -output bash-macos-universal
+        run: lipo -create -arch arm64 artifacts/bash-macos-aarch64/bash-macos-aarch64 -arch x86_64 artifacts/bash-macos-x86_64/bash-macos-x86_64 -output bash-macos-universal
       - uses: actions/upload-artifact@v3
         with:
           name: bash-macos-universal
