@@ -2,7 +2,7 @@
 
 bash_version="5.2"
 bash_patch_level=15
-musl_version="1.2.3"
+musl_version="1.2.4"
 
 export bash_version
 export bash_patch_level
