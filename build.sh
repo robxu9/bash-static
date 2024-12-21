@@ -24,140 +24,140 @@
 # For Linux, also builds musl for truly static linking if
 # musl is not installed.
 
-set -e
-set -o pipefail
+set -euo pipefail
 shopt -s nullglob
 
-# load version info
-# shellcheck source=./version.sh
-. version.sh
+# Silence these
+pushd() { command pushd "$@" >/dev/null; }
 
-target="$1"
-arch="$2"
+popd() { command popd >/dev/null; }
 
-if [[ "$target" == "" ]]; then
-  echo "! no target specified" >&2
-  exit 1
-fi
+# Only pull files that don't already exist
+mycurl() {
+  (($# == 2)) || return
+  [[ -f ${1##*/} ]] || { echo "File: ${1##*/} | Url: ${1}" && curl -sLO "$1"; }
+  [[ -f ${1##*/}.${2} || ${NO_SIGS:-} ]] || {
+    echo "File: ${1##*/}.${2} | Url: ${1}.${2}" && curl -sLO "${1}.${2}"
+    gpg --trust-model always --verify "${1##*/}.${2}" "${1##*/}" 2>/dev/null
+  }
+}
 
-if [[ "$arch" == "" ]]; then
-  echo "! no arch specified" >&2
-  exit 1
-fi
+main() {
+  [[ ${1:-} ]] || { echo "! no target specified" >&2 && exit 1; }
+  [[ ${2:-} ]] || { echo "! no arch specified" >&2 && exit 1; }
 
-if [ -d build ]; then
-  echo "= removing previous build directory"
-  rm -rf build
-fi
+  declare -r target=${1} arch=${2} tag=${3:-}
+  declare -r bash_mirror='https://ftp.gnu.org/gnu/bash'
+  declare -r musl_mirror='https://musl.libc.org/releases'
 
-mkdir build # make build directory
-pushd build
+  # Ensure we are in the project root
+  pushd "${0%/*}"
+  # load version info
+  # shellcheck source=version.sh
+  . "./version${tag:+-$tag}.sh"
 
-# pre-prepare gpg for verificaiton
-echo "= preparing gpg"
-GNUPGHOME="$(mktemp -d)"
-export GNUPGHOME
-# public key for bash
-gpg --batch --keyserver hkps://keyserver.ubuntu.com:443 --recv-keys 7C0135FB088AAF6C66C650B9BB5869F064EA74AB
-# public key for musl
-gpg --batch --keyserver hkps://keyserver.ubuntu.com:443 --recv-keys 836489290BB6B70F99FFDA0556BCDB593020450F
+  # make build directory
+  mkdir -p build && pushd build
 
-# download tarballs
-echo "= downloading bash"
-curl -LO http://ftp.gnu.org/gnu/bash/bash-${bash_version}.tar.gz
-curl -LO http://ftp.gnu.org/gnu/bash/bash-${bash_version}.tar.gz.sig
-gpg --batch --verify bash-${bash_version}.tar.gz.sig bash-${bash_version}.tar.gz
+  # pre-prepare gpg for verificaiton
+  echo "= preparing gpg"
+  export GNUPGHOME=${PWD}/.gnupg
+  # public key for bash
+  gpg --quiet --list-keys 7C0135FB088AAF6C66C650B9BB5869F064EA74AB ||
+    gpg --quiet --keyserver hkps://keyserver.ubuntu.com:443 \
+      --recv-keys 7C0135FB088AAF6C66C650B9BB5869F064EA74AB
+  # public key for musl
+  gpg --quiet --list-keys 836489290BB6B70F99FFDA0556BCDB593020450F ||
+    gpg --quiet --keyserver hkps://keyserver.ubuntu.com:443 \
+      --recv-keys 836489290BB6B70F99FFDA0556BCDB593020450F
 
-echo "= extracting bash"
-tar -xf bash-${bash_version}.tar.gz
+  # download tarballs
+  echo "= downloading bash ${bash_version}"
+  mycurl ${bash_mirror}/bash-${bash_version}.tar.gz sig
 
-echo "= patching bash"
-bash_patch_prefix=$(echo "bash${bash_version}" | sed -e 's/\.//g')
-for lvl in $(seq 1 $bash_patch_level); do
-    curl -LO http://ftp.gnu.org/gnu/bash/bash-${bash_version}-patches/"${bash_patch_prefix}"-"$(printf '%03d' "$lvl")"
-    curl -LO http://ftp.gnu.org/gnu/bash/bash-${bash_version}-patches/"${bash_patch_prefix}"-"$(printf '%03d' "$lvl")".sig
-    gpg --batch --verify "${bash_patch_prefix}"-"$(printf '%03d' "$lvl")".sig "${bash_patch_prefix}"-"$(printf '%03d' "$lvl")"
+  echo "= extracting bash ${bash_version}"
+  rm -fr bash-${bash_version}
+  tar -xf "bash-${bash_version}.tar.gz"
 
-    pushd bash-${bash_version}
-    patch -p0 < ../"${bash_patch_prefix}"-"$(printf '%03d' "$lvl")"
-    popd
-done
+  echo "= patching bash ${bash_version} | patches: ${bash_patch_level}"
+  for ((lvl = 1; lvl <= bash_patch_level; lvl++)); do
+    printf -v bash_patch 'bash%s-%03d' "${bash_version/\./}" "${lvl}"
+    mycurl "${bash_mirror}/bash-${bash_version}-patches/${bash_patch}" sig
+    pushd bash-${bash_version} && patch -sp0 <../"${bash_patch}" && popd
+  done
 
-echo "= patching with any custom patches we have"
-for i in ../custom/*.patch; do
-    echo $i
-    pushd bash-${bash_version}
-    patch -p1 < ../"$i"
-    popd
-done
+  echo "= patching with any custom patches we have"
+  for patch in ../custom/bash"${bash_version/\./}"*.patch; do
+    echo "Applying ${patch}"
+    pushd bash-${bash_version} && patch -sp1 <../"${patch}" && popd
+  done
 
-configure_args=()
+  configure_args=(--enable-silent-rules)
 
-if [ "$target" = "linux" ]; then
-  if [ "$(grep ID= < /etc/os-release | head -n1)" = "ID=alpine" ]; then
-    echo "= skipping installation of musl because this is alpine linux (and it is already installed)"
-  else
-    echo "= downloading musl"
-    curl -LO https://musl.libc.org/releases/musl-${musl_version}.tar.gz
-    curl -LO https://musl.libc.org/releases/musl-${musl_version}.tar.gz.asc
-    gpg --batch --verify musl-${musl_version}.tar.gz.asc musl-${musl_version}.tar.gz
-
-    echo "= extracting musl"
-    tar -xf musl-${musl_version}.tar.gz
-
-    echo "= building musl"
-    working_dir=$(pwd)
-
-    install_dir=${working_dir}/musl-install
-
-    pushd musl-${musl_version}
-    ./configure --prefix="${install_dir}"
-    make install
-    popd # musl-${musl-version}
-
-    echo "= setting CC to musl-gcc"
-    export CC=${working_dir}/musl-install/bin/musl-gcc
-  fi
-  export CFLAGS="-static"
-else
-  echo "= WARNING: your platform does not support static binaries."
-  echo "= (This is mainly due to non-static libc availability.)"
-  if [[ $target == "macos" ]]; then
-    # set minimum version of macOS to 10.13
-    export MACOSX_DEPLOYMENT_TARGET="10.13"
-    # https://www.gnu.org/software/bash/manual/html_node/Compilers-and-Options.html
-    export CC="clang -std=c89 -Wno-implicit-function-declaration -Wno-return-type"
-
-    # use included gettext to avoid reading from other places, like homebrew
-    configure_args=("${configure_args[@]}" "--with-included-gettext")
-
-    # if $arch is aarch64 for mac, target arm64e
-    if [[ $arch == "aarch64" ]]; then
-      export CFLAGS="-target arm64-apple-macos"
-      configure_args=("${configure_args[@]}" "--host=aarch64-apple-darwin")
+  if [[ $target == linux ]]; then
+    if . /etc/os-release && [[ $ID == alpine ]]; then
+      echo "= skipping installation of musl (already installed on Alpine)"
     else
-      export CFLAGS="-target x86_64-apple-macos10.12"
-      configure_args=("${configure_args[@]}" "--host=x86_64-apple-macos10.12")
+      install_dir=${PWD}/musl-install-${musl_version}
+      if [[ -f ${install_dir}/bin/musl-gcc ]]; then
+        echo "= reusing existing musl ${musl_version}"
+      else
+        echo "= downloading musl ${musl_version}"
+        mycurl ${musl_mirror}/musl-${musl_version}.tar.gz asc
+
+        echo "= extracting musl ${musl_version}"
+        rm -fr musl-${musl_version}
+        tar -xf musl-${musl_version}.tar.gz
+
+        echo "= building musl ${musl_version}"
+        pushd musl-${musl_version}
+        ./configure --prefix="${install_dir}" "${configure_args[@]}"
+        make -s install
+        popd # musl-${musl-version}
+        rm -fr musl-${musl_version}
+      fi
+
+      echo "= setting CC to musl-gcc ${musl_version}"
+      export CC=${install_dir}/bin/musl-gcc
+    fi
+    export CFLAGS="${CFLAGS:-} -Os -static"
+  else
+    echo "= WARNING: your platform does not support static binaries."
+    echo "= (This is mainly due to non-static libc availability.)"
+    if [[ $target == macos ]]; then
+      # set minimum version of macOS to 10.13
+      export MACOSX_DEPLOYMENT_TARGET="10.13"
+      export CC="clang -std=c89 -Wno-return-type"
+
+      # use included gettext to avoid reading from other places, like homebrew
+      configure_args=("${configure_args[@]}" "--with-included-gettext")
+
+      # if $arch is aarch64 for mac, target arm64e
+      if [[ $arch == aarch64 ]]; then
+        export CFLAGS="${CFLAGS:-} -Os -target arm64-apple-macos"
+        configure_args=("${configure_args[@]}" "--host=aarch64-apple-darwin")
+      else
+        export CFLAGS="${CFLAGS:-} -Os -target x86_64-apple-macos10.12"
+        configure_args=("${configure_args[@]}" "--host=x86_64-apple-macos10.12")
+      fi
     fi
   fi
-fi
 
-echo "= building bash"
+  echo "= building bash ${bash_version}"
+  pushd bash-${bash_version}
+  export CPPFLAGS="${CFLAGS}" # Some versions need both set
+  autoconf -f && ./configure --without-bash-malloc "${configure_args[@]}"
+  make -s && make -s tests
+  popd # bash-${bash_version}
+  popd # build
 
-pushd bash-${bash_version}
-autoconf -f
-CFLAGS="$CFLAGS -Os" ./configure --without-bash-malloc "${configure_args[@]}"
-make
-make tests
-popd # bash-${bash_version}
+  echo "= extracting bash ${bash_version} binary"
+  mkdir -p releases
+  cp build/bash-${bash_version}/bash releases/bash-${bash_version}-static
+  strip -s releases/bash-${bash_version}-static
+  rm -fr build/bash-${bash_version}
+  echo "= done"
+}
 
-popd # build
-
-if [ ! -d releases ]; then
-  mkdir releases
-fi
-
-echo "= extracting bash binary"
-cp build/bash-${bash_version}/bash releases
-
-echo "= done"
+# Only execute if not being sourced
+[[ ${BASH_SOURCE[0]} == "$0" ]] || return 0 && main "$@"
