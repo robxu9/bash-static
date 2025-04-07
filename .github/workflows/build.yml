@@ -59,7 +59,7 @@ jobs:
         arch: [armv6, armv7, aarch64]
     steps:
       - uses: actions/checkout@v4
-      - uses: uraimo/run-on-arch-action@v2.8.1
+      - uses: uraimo/run-on-arch-action@v3.0.0
         id: build
         with:
           arch: ${{ matrix.arch }}
