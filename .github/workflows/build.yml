@@ -48,7 +48,7 @@ jobs:
     - name: build
       run: ./build.sh ${{matrix.target}} ${{matrix.arch}} && mv -v releases/bash releases/bash-${{matrix.target}}-${{matrix.arch}}
       shell: bash
-    - uses: actions/upload-artifact@v3  
+    - uses: actions/upload-artifact@v4  
       with:
         name: bash-${{matrix.target}}-${{matrix.arch}}
         path: releases/bash-${{matrix.target}}-${{matrix.arch}}
@@ -84,7 +84,7 @@ jobs:
           # Produce a binary artifact and place it in the mounted volume
           run: |
             cd /data && ./build.sh linux ${{matrix.arch}} && mv -v releases/bash releases/bash-linux-${{matrix.arch}}
-      - uses: actions/upload-artifact@v3  
+      - uses: actions/upload-artifact@v4  
         with:
           name: bash-linux-${{matrix.arch}}
           path: releases/bash-linux-${{matrix.arch}}
@@ -100,7 +100,7 @@ jobs:
         run: chmod +x artifacts/*/* && ls -al && ls -al artifacts/
       - name: run lipo to create universal binary
         run: lipo -create -arch arm64 artifacts/bash-macos-aarch64/bash-macos-aarch64 -arch x86_64 artifacts/bash-macos-x86_64/bash-macos-x86_64 -output bash-macos-universal
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: bash-macos-universal
           path: bash-macos-universal
