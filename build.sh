@@ -35,9 +35,9 @@ popd() { command popd >/dev/null; }
 # Only pull files that don't already exist
 mycurl() {
   (($# == 2)) || return
-  [[ -f ${1##*/} ]] || { echo "File: ${1##*/} | Url: ${1}" && curl -sLO "$1"; }
+  [[ -f ${1##*/} ]] || { echo "File: ${1##*/} | Url: ${1}" && curl -sSfLO "$1"; }
   [[ -f ${1##*/}.${2} || ${NO_SIGS:-} ]] || {
-    echo "File: ${1##*/}.${2} | Url: ${1}.${2}" && curl -sLO "${1}.${2}"
+    echo "File: ${1##*/}.${2} | Url: ${1}.${2}" && curl -sSfLO "${1}.${2}"
     gpg --trust-model always --verify "${1##*/}.${2}" "${1##*/}" 2>/dev/null
   }
 }
